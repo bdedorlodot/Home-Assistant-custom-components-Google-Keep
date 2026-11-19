@@ -36,9 +36,14 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     labels = config.get(CONF_LABELS)
     pinned = config.get(CONF_PINNED)
     keep = gkeepapi.Keep()
-    login_success = keep.login(username, password)
-    if not login_success:
-        raise Exception('Invalid username or password')
+    master_token = password  # le champ "password" contient maintenant le jeton maître
+    try:
+        if hasattr(keep, 'authenticate'):
+            keep.authenticate(username, master_token)
+        else:
+            keep.resume(username, master_token)
+    except gkeepapi.exception.LoginException as err:
+        raise Exception('Authentification Google Keep refusée : {}'.format(err))
     dev = []
     hash_value = hashlib.md5(str((username, str(titles), str(labels), pinned)).encode()).hexdigest()[-10:]
     uid = '{}_{}'.format(sensor_name, hash_value)
